@@ -5,6 +5,7 @@ import (
 	"math"
 )
 
+// Value represents a node in the computation graph.
 type Value struct {
 	data      float64
 	grad      float64
@@ -13,6 +14,7 @@ type Value struct {
 	_backward func()
 }
 
+// NewValue creates a new Value with the specified data and children.
 func NewValue(data float64, children []*Value) *Value {
 	return &Value{
 		data:  data,
@@ -24,10 +26,27 @@ func NewValue(data float64, children []*Value) *Value {
 	}
 }
 
+// Data returns the data of the Value.
 func (v *Value) Data() float64 {
 	return v.data
 }
 
+// Grad returns the gradient of the Value.
+func (v *Value) Grad() float64 {
+	return v.grad
+}
+
+// AddToData adds a value to the data of the Value.
+func (v *Value) AddToData(delta float64) {
+	v.data += delta
+}
+
+// SetGrad sets the gradient of the Value.
+func (v *Value) SetGrad(grad float64) {
+	v.grad = grad
+}
+
+// Add performs addition and returns a new Value.
 func (v *Value) Add(other *Value) *Value {
 	out := NewValue(v.data+other.data, []*Value{v, other})
 
@@ -39,6 +58,7 @@ func (v *Value) Add(other *Value) *Value {
 	return out
 }
 
+// Mul performs multiplication and returns a new Value.
 func (v *Value) Mul(other *Value) *Value {
 	out := NewValue(v.data*other.data, []*Value{v, other})
 
@@ -50,6 +70,7 @@ func (v *Value) Mul(other *Value) *Value {
 	return out
 }
 
+// Pow performs exponentiation and returns a new Value.
 func (v *Value) Pow(exp float64) *Value {
 	out := NewValue(math.Pow(v.data, exp), []*Value{v})
 
@@ -60,6 +81,7 @@ func (v *Value) Pow(exp float64) *Value {
 	return out
 }
 
+// Relu performs the ReLU activation function and returns a new Value.
 func (v *Value) Relu() *Value {
 	out := NewValue(math.Max(0, v.data), []*Value{v})
 
@@ -72,6 +94,7 @@ func (v *Value) Relu() *Value {
 	return out
 }
 
+// Tanh performs the Tanh activation function and returns a new Value.
 func (v *Value) Tanh() *Value {
 	out := NewValue(math.Tanh(v.data), []*Value{v})
 
@@ -82,6 +105,7 @@ func (v *Value) Tanh() *Value {
 	return out
 }
 
+// Backward performs backpropagation to compute gradients.
 func (v *Value) Backward() {
 	// Topologically sort nodes
 	topo := []*Value{}
@@ -106,6 +130,7 @@ func (v *Value) Backward() {
 	}
 }
 
+// String returns a string representation of the Value.
 func (v *Value) String() string {
 	return fmt.Sprintf("Value(data=%.4f, grad=%.4f)", v.data, v.grad)
 }
