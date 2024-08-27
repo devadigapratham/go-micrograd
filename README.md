@@ -7,6 +7,7 @@
 - **Automatic Differentiation**: Supports basic operations and computes gradients automatically.
 - **Gradient Descent**: Enables training simple models by utilizing gradient-based optimization.
 - **Dataset Utilities**: Provides dataset structures for training models.
+- **KAN and MLP Benchmarking**: Benchmarks between Kolmogorov Arnold Network (KAN) and Multilayer Perceptron (MLP) models are implemented and compared in the project.
 
 ## Project Structure
 
