@@ -134,3 +134,21 @@ func (v *Value) Backward() {
 func (v *Value) String() string {
 	return fmt.Sprintf("Value(data=%.4f, grad=%.4f)", v.data, v.grad)
 }
+
+func (v *Value) Div(other *Value) *Value {
+	return v.Mul(other.Pow(-1))
+}
+
+// Exp performs exponentiation (e^x) and returns a new Value.
+func (v *Value) Exp() *Value {
+	out := NewValue(math.Exp(v.data), []*Value{v})
+	out._backward = func() {
+		v.grad += out.data * out.grad
+	}
+	return out
+}
+
+// Sigmoid performs the sigmoid activation function and returns a new Value.
+func (v *Value) Sigmoid() *Value {
+	return v.Exp().Div(v.Exp().Add(NewValue(1, nil)))
+}

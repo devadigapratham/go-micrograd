@@ -5,26 +5,30 @@ import (
 	"go-micrograd/rng"
 )
 
-// KolmogorovArnoldNeuron represents a neuron in a Kolmogorov-Arnold Network layer.
 type KolmogorovArnoldNeuron struct {
-	w *autograd.Value
+	w []*autograd.Value
 	b *autograd.Value
 }
 
-func NewKANeuron(random *rng.RNG) *KolmogorovArnoldNeuron {
-	w := autograd.NewValue(float64(random.Uniform(-1, 1)), nil)
+func NewKANeuron(nin int, random *rng.RNG) *KolmogorovArnoldNeuron {
+	weights := make([]*autograd.Value, nin)
+	for i := 0; i < nin; i++ {
+		weights[i] = autograd.NewValue(float64(random.Uniform(-1, 1)), nil)
+	}
 	b := autograd.NewValue(0, nil)
-	return &KolmogorovArnoldNeuron{w: w, b: b}
+	return &KolmogorovArnoldNeuron{w: weights, b: b}
 }
 
-func (n *KolmogorovArnoldNeuron) Forward(x *autograd.Value) *autograd.Value {
-	// Use some transformation function, e.g., sin or tanh
-	activation := n.w.Mul(x).Add(n.b)
+func (n *KolmogorovArnoldNeuron) Forward(x []*autograd.Value) *autograd.Value {
+	activation := n.b
+	for i, input := range x {
+		activation = activation.Add(n.w[i].Mul(input))
+	}
 	return activation.Tanh()
 }
 
 func (n *KolmogorovArnoldNeuron) Parameters() []*autograd.Value {
-	return []*autograd.Value{n.w, n.b}
+	return append(n.w, n.b)
 }
 
 type KolmogorovArnoldLayer struct {
@@ -34,7 +38,7 @@ type KolmogorovArnoldLayer struct {
 func NewKANLayer(nin int, nout int, random *rng.RNG) *KolmogorovArnoldLayer {
 	neurons := make([]*KolmogorovArnoldNeuron, nout)
 	for i := 0; i < nout; i++ {
-		neurons[i] = NewKANeuron(random)
+		neurons[i] = NewKANeuron(nin, random)
 	}
 	return &KolmogorovArnoldLayer{neurons: neurons}
 }
@@ -42,7 +46,7 @@ func NewKANLayer(nin int, nout int, random *rng.RNG) *KolmogorovArnoldLayer {
 func (l *KolmogorovArnoldLayer) Forward(x []*autograd.Value) []*autograd.Value {
 	outputs := make([]*autograd.Value, len(l.neurons))
 	for i, neuron := range l.neurons {
-		outputs[i] = neuron.Forward(x[i])
+		outputs[i] = neuron.Forward(x)
 	}
 	return outputs
 }
@@ -55,7 +59,6 @@ func (l *KolmogorovArnoldLayer) Parameters() []*autograd.Value {
 	return params
 }
 
-// KolmogorovArnoldNetwork represents a complete Kolmogorov-Arnold Network.
 type KolmogorovArnoldNetwork struct {
 	layers []*KolmogorovArnoldLayer
 }
@@ -69,11 +72,21 @@ func NewKAN(nin int, nouts []int, random *rng.RNG) *KolmogorovArnoldNetwork {
 	return &KolmogorovArnoldNetwork{layers: layers}
 }
 
-func (kan *KolmogorovArnoldNetwork) Forward(x []*autograd.Value) []*autograd.Value {
-	for _, layer := range kan.layers {
-		x = layer.Forward(x)
+func (kan *KolmogorovArnoldNetwork) Forward(x []float64) []*autograd.Value {
+	values := make([]*autograd.Value, len(x))
+	for i, v := range x {
+		values[i] = autograd.NewValue(v, nil)
 	}
-	return x
+	for i, layer := range kan.layers {
+		values = layer.Forward(values)
+		if i == len(kan.layers)-1 {
+			// Apply sigmoid to the final layer
+			for j, v := range values {
+				values[j] = v.Sigmoid()
+			}
+		}
+	}
+	return values
 }
 
 func (kan *KolmogorovArnoldNetwork) Parameters() []*autograd.Value {

@@ -9,47 +9,53 @@ import (
 	"time"
 )
 
+func convertPoints(points []dataset.Point) []nn.DataPoint {
+	result := make([]nn.DataPoint, len(points))
+	for i, p := range points {
+		result[i] = nn.DataPoint{
+			X:     float64(p.X), // Convert float32 to float64
+			Y:     float64(p.Y), // Convert float32 to float64
+			Label: 0,            // Default label or handle accordingly
+		}
+	}
+	return result
+}
+
 func main() {
-	// Initialize the random number generatorgg
 	random := rng.NewRNG(42)
+	trainPoints, valPoints, _ := dataset.GenDataYinYang(random, 100)
 
-	// Generate dataset
-	trainSplit, valSplit, _ := dataset.GenDataYinYang(random, 100)
+	trainSplit := convertPoints(trainPoints)
+	valSplit := convertPoints(valPoints)
 
-	// Initialize both models: MLP and KAN
 	mlpModel := nn.NewMLP(2, []int{8, 3}, random)
 	kanModel := nn.NewKAN(2, []int{8, 3}, random)
 
-	// Initialize optimizers for both models
-	mlpOptimizer := optimizer.NewAdamW(mlpModel.Parameters(), 0.1, 1e-4)
-	kanOptimizer := optimizer.NewAdamW(kanModel.Parameters(), 0.1, 1e-4)
+	mlpOptimizer := optimizer.NewAdamW(mlpModel.Parameters(), 0.1, 1e-3)
+	kanOptimizer := optimizer.NewAdamW(kanModel.Parameters(), 0.1, 1e-3)
 
-	// Benchmark variables
 	numSteps := 100
-	mlpTrainLosses, kanTrainLosses := make([]float64, numSteps), make([]float64, numSteps)
-	mlpValLosses, kanValLosses := make([]float64, numSteps/10), make([]float64, numSteps/10)
+	mlpTrainLosses := make([]float64, numSteps)
+	kanTrainLosses := make([]float64, numSteps)
+	mlpValLosses := make([]float64, numSteps/10)
+	kanValLosses := make([]float64, numSteps/10)
 
-	// Time measurements
 	mlpStartTime := time.Now()
 	kanStartTime := time.Now()
 
-	// Training loop for both models
 	for step := 0; step < numSteps; step++ {
-		// MLP Training
 		mlpTrainLoss := nn.LossFunction(mlpModel, trainSplit)
 		mlpTrainLoss.Backward()
 		mlpOptimizer.Step()
 		mlpOptimizer.ZeroGrad()
 		mlpTrainLosses[step] = mlpTrainLoss.Data()
 
-		// KAN Training
 		kanTrainLoss := nn.LossFunction(kanModel, trainSplit)
 		kanTrainLoss.Backward()
 		kanOptimizer.Step()
 		kanOptimizer.ZeroGrad()
 		kanTrainLosses[step] = kanTrainLoss.Data()
 
-		// Every 10 steps, evaluate validation loss
 		if step%10 == 0 {
 			mlpValLoss := nn.LossFunction(mlpModel, valSplit)
 			mlpValLosses[step/10] = mlpValLoss.Data()
@@ -65,7 +71,6 @@ func main() {
 	mlpTotalTime := time.Since(mlpStartTime)
 	kanTotalTime := time.Since(kanStartTime)
 
-	// Final benchmark summary
 	fmt.Println("\n==== Benchmark Results ====")
 	fmt.Printf("MLP Training Time: %v\n", mlpTotalTime)
 	fmt.Printf("KAN Training Time: %v\n", kanTotalTime)

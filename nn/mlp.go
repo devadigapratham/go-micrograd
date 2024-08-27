@@ -30,9 +30,9 @@ func (n *Neuron) Parameters() []*autograd.Value {
 }
 
 func (n *Neuron) Forward(inputs []*autograd.Value) *autograd.Value {
-	out := autograd.NewValue(n.b.Data(), nil)
-	for i := range inputs {
-		out = out.Add(n.w[i].Mul(inputs[i]))
+	out := n.b
+	for i, input := range inputs {
+		out = out.Add(n.w[i].Mul(input))
 	}
 	if n.nonlin {
 		return out.Tanh()
@@ -89,9 +89,19 @@ func (m *MLP) Parameters() []*autograd.Value {
 	return params
 }
 
-func (m *MLP) Forward(inputs []*autograd.Value) []*autograd.Value {
-	for _, layer := range m.layers {
-		inputs = layer.Forward(inputs)
+func (m *MLP) Forward(inputs []float64) []*autograd.Value {
+	values := make([]*autograd.Value, len(inputs))
+	for i, v := range inputs {
+		values[i] = autograd.NewValue(v, nil)
 	}
-	return inputs
+	for i, layer := range m.layers {
+		values = layer.Forward(values)
+		if i == len(m.layers)-1 {
+			// Apply sigmoid to the final layer
+			for j, v := range values {
+				values[j] = v.Sigmoid()
+			}
+		}
+	}
+	return values
 }
